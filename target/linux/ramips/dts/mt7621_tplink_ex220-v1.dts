@@ -1,0 +1,233 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+
+#include "mt7621.dtsi"
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+
+/ {
+	compatible = "tplink,ex220-v1", "mediatek,mt7621-soc";
+	model = "TP-Link EX220 v1";
+
+	aliases {
+		led-boot = &led_power;
+		led-failsafe = &led_power;
+		led-running = &led_power;
+		led-upgrade = &led_power;
+		label-mac-device = &gmac0;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200";
+	};
+
+	keys {
+		compatible = "gpio-keys";
+
+		reset {
+			label = "reset";
+			gpios = <&gpio 8 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
+		};
+
+		wps {
+			label = "rfkill";
+			gpios = <&gpio 7 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RFKILL>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_power: power {
+			label = "green:power";
+			gpios = <&gpio 18 GPIO_ACTIVE_LOW>;
+		};
+
+		wifi2g {
+			label = "green:wifi2g";
+			gpios = <&gpio 16 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "phy0tpt";
+		};
+
+		wifi5g {
+			label = "green:wifi5g";
+			gpios = <&gpio 15 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "phy1tpt";
+		};
+
+		wan-green {
+			label = "green:wan";
+			gpios = <&gpio 14 GPIO_ACTIVE_LOW>;
+		};
+
+		wan-orange {
+			label = "orange:wan";
+			gpios = <&gpio 13 GPIO_ACTIVE_LOW>;
+		};
+
+		lan {
+			label = "green:lan";
+			gpios = <&gpio 4 GPIO_ACTIVE_LOW>;
+		};
+
+		wps {
+			label = "green:wps";
+			gpios = <&gpio 3 GPIO_ACTIVE_LOW>;
+		};
+	};
+};
+
+&spi0 {
+	status = "okay";
+
+	flash@0 {
+		compatible = "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <25000000>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "boot";
+				reg = <0x00 0x30000>;
+				read-only;
+			};
+
+			partition@30000 {
+				label = "boot-env";
+				reg = <0x30000 0x10000>;
+				read-only;
+			};
+
+			partition@40000 {
+				label = "factory";
+				reg = <0x40000 0x10000>;
+				read-only;
+			};
+
+			partition@50000 {
+				label = "config";
+				reg = <0x50000 0x10000>;
+				read-only;
+			};
+
+			partition@60000 {
+				label = "isp_config";
+				reg = <0x60000 0x10000>;
+				read-only;
+			};
+
+			rom_file: partition@70000 {
+				label = "rom_file";
+				reg = <0x70000 0x10000>;
+				read-only;
+			};
+
+			partition@80000 {
+				label = "cloud";
+				reg = <0x80000 0x10000>;
+				read-only;
+			};
+
+			radio: partition@90000 {
+				label = "radio";
+				reg = <0x90000 0x20000>;
+				read-only;
+			};
+
+			partition@b0000 {
+				label = "config_bak";
+				reg = <0xb0000 0x10000>;
+				read-only;
+			};
+
+			partition@c0000 {
+				compatible = "denx,fit";
+				label = "firmware";
+				reg = <0xc0000 0xf30000>;
+			};
+		};
+	};
+};
+
+&pcie {
+	status = "okay";
+};
+
+&pcie1 {
+	wifi@0,0 {
+		compatible = "mediatek,mt76";
+		reg = <0x0000 0 0 0 0>;
+		mediatek,mtd-eeprom = <&radio 0x0>;
+		nvmem-cells = <&macaddr_rom_file_f100>;
+		nvmem-cell-names = "mac-address";
+		mediatek,disable-radar-background;
+	};
+};
+
+&gmac0 {
+	nvmem-cells = <&macaddr_rom_file_f100>;
+	nvmem-cell-names = "mac-address";
+};
+
+&gmac1 {
+	status = "okay";
+	label = "wan";
+	phy-handle = <&ethphy4>;
+
+	nvmem-cells = <&macaddr_rom_file_f100>;
+	nvmem-cell-names = "mac-address";
+	mac-address-increment = <1>;
+};
+
+&mdio {
+	ethphy4: ethernet-phy@4 {
+		reg = <4>;
+	};
+};
+
+&switch0 {
+	ports {
+		port@0 {
+			status = "okay";
+			label = "lan1";
+		};
+
+		port@1 {
+			status = "okay";
+			label = "lan2";
+		};
+
+		port@2 {
+			status = "okay";
+			label = "lan3";
+		};
+
+		port@3 {
+			status = "okay";
+			label = "lan4";
+		};
+	};
+};
+
+&state_default {
+	gpio {
+		groups = "i2c", "uart3", "jtag", "wdt";
+		function = "gpio";
+	};
+};
+
+&rom_file {
+	compatible = "nvmem-cells";
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	macaddr_rom_file_f100: macaddr@f100 {
+		reg = <0xf100 0x6>;
+	};
+};
